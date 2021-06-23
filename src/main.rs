@@ -1,5 +1,4 @@
 use nannou::lyon::lyon_tessellation::LineJoin;
-use nannou::noise;
 use nannou::noise::NoiseFn;
 use nannou::noise::Seedable;
 use nannou::prelude::*;
@@ -17,7 +16,12 @@ fn main() {
 fn model(app: &App) -> Model {
     app.set_loop_mode(LoopMode::loop_once());
 
-    let _window = app.new_window().size(1024, 256).view(view).build().unwrap();
+    let _window = app
+        .new_window()
+        .size(1920, 1080)
+        .view(view)
+        .build()
+        .unwrap();
 
     Model { seed: 1 }
 }
@@ -31,9 +35,10 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let mut rng = StdRng::seed_from_u64(model.seed);
     let noise = nannou::noise::Perlin::new().set_seed(model.seed as u32);
 
-    let line_count = 100;
+    let line_count = 10000;
     let min_vertices_per_line = 10;
     let max_vertices_per_line = 30;
+    let step_size = 2.5;
 
     let lines = (0..line_count).map(|_| {
         let mut point = pt2(
@@ -43,10 +48,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
         let mut line: Vec<Vec2> = vec![point];
 
         for _ in 0..(max_vertices_per_line - min_vertices_per_line) {
-            let noise_value = noise.get([point[0] as f64, point[1] as f64]) * 0.05;
+            let scaled_x = point[0] * 0.005;
+            let scaled_y = point[1] * 0.005;
+            let noise_value = noise.get([scaled_x as f64, scaled_y as f64]);
             let angle = map_range(noise_value, 0.0, 1.0, 0.0, PI * 2.0 as f32);
 
-            point = pt2(point[0] + angle.sin(), point[1] + angle.cos());
+            point = pt2(
+                point[0] + step_size * angle.sin(),
+                point[1] + step_size * angle.cos(),
+            );
             line.push(point);
         }
 
