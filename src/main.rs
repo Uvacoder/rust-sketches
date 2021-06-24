@@ -1,4 +1,4 @@
-use nannou::lyon::lyon_tessellation::LineJoin;
+use nannou::color::{rgb_u32, Gradient};
 use nannou::noise::NoiseFn;
 use nannou::noise::Seedable;
 use nannou::prelude::*;
@@ -7,6 +7,7 @@ use nannou::rand::{Rng, SeedableRng};
 
 struct Model {
     seed: u64,
+    colors: [Rgb<u8>; 9],
 }
 
 fn main() {
@@ -24,17 +25,40 @@ fn model(app: &App) -> Model {
         .build()
         .unwrap();
 
-    Model { seed: 1 }
+    let colors = [
+        rgb_u32(0xfff7ec),
+        rgb_u32(0xfee8c8),
+        rgb_u32(0xfdd49e),
+        rgb_u32(0xfdbb84),
+        rgb_u32(0xfc8d59),
+        rgb_u32(0xef6548),
+        rgb_u32(0xd7301f),
+        rgb_u32(0xb30000),
+        rgb_u32(0x7f0000),
+    ];
+
+    Model { seed: 1, colors }
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     let w = app.window_rect();
 
-    draw.background().color(WHITE);
+    draw.background().color(BLACK);
 
     let mut rng = StdRng::seed_from_u64(model.seed);
     let noise = nannou::noise::Perlin::new().set_seed(model.seed as u32);
+    let gradient: Gradient<LinSrgb<f32>> = Gradient::new(
+        model
+            .colors
+            .iter()
+            .map(|c| (c.red as f32, c.green as f32, c.blue as f32).into()),
+    );
+
+    println!("gradient {:#?}", gradient);
+    println!("gradient get 0 {:#?}", gradient.get(0.0));
+    println!("gradient get 0.5 {:#?}", gradient.get(0.5));
+    println!("gradient get 1.0 {:#?}", gradient.get(1.0));
 
     let line_count = 3000;
     let min_vertices_per_line = 5;
@@ -43,25 +67,23 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let lines = (0..line_count).map(|_| {
         let mut point = pt2(
-            rng.gen_range(w.left()..w.right()),
-            rng.gen_range(w.bottom()..w.top()),
+            rng.gen_range(w.left() - 30.0..w.right() + 30.0),
+            rng.gen_range(w.bottom() - 30.0..w.top() + 30.0),
         );
-        let mut line: Vec<Vec2> = vec![point];
+        let mut line: Vec<(Vec2, LinSrgb<f32>)> = vec![(point, gradient.get(0.0))];
 
-        for _ in 0..(rng.gen_range(min_vertices_per_line..max_vertices_per_line)) {
+        for i in 0..(rng.gen_range(min_vertices_per_line..max_vertices_per_line)) {
             let scaled_x = point[0] * 0.0005;
             let scaled_y = point[1] * 0.0005;
             let noise_value = noise.get([scaled_x as f64, scaled_y as f64]);
-            println!("Noise value: {}", noise_value);
 
             let angle = map_range(noise_value, 0.0, 1.0, 0.0, PI * 2.0 as f32);
-            println!("Angle: {}", angle);
 
             point = pt2(
-                point[0] + step_size * angle.sin(),
-                point[1] + step_size * angle.cos(),
+                point[0] + step_size * angle.cos(),
+                point[1] + step_size * angle.sin(),
             );
-            line.push(point);
+            line.push((point, gradient.get(map_range(i, 0, line.len(), 0.0, 1.0))));
         }
 
         line
@@ -69,10 +91,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     for line in lines {
         draw.polyline()
-            .join(LineJoin::Round)
+            .join_round()
             .weight(1.0)
-            .color(BLUE)
-            .points(line);
+            .points_colored(line);
     }
 
     draw.to_frame(app, &frame).unwrap();
