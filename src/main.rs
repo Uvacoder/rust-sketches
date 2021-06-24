@@ -20,14 +20,15 @@ fn model(app: &App) -> Model {
     let _window = app
         .new_window()
         // .size(1024, 768)
-        .size(1920, 1080)
+        .size(1024, 768)
         .view(view)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
-
     let colors = [
-        lin_srgb(0xfd as f32, 0xd4 as f32, 0x9e as f32),
+        // lin_srgb(0xff as f32, 0xf7 as f32, 0xec as f32),
+        // lin_srgb(0xfe as f32, 0xe8 as f32, 0xc8 as f32),
+        // lin_srgb(0xfd as f32, 0xd4 as f32, 0x9e as f32),
         lin_srgb(0xfd as f32, 0xbb as f32, 0x84 as f32),
         lin_srgb(0xfc as f32, 0x8d as f32, 0x59 as f32),
         lin_srgb(0xef as f32, 0x65 as f32, 0x48 as f32),
@@ -48,7 +49,7 @@ fn model(app: &App) -> Model {
 
     // Model { seed: 1, colors }
     Model {
-        seed: thread_rng().gen_range(10..100),
+        seed: thread_rng().gen_range(10..1000),
         colors,
     }
 }
@@ -57,7 +58,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     let w = app.window_rect();
 
-    draw.background().color(rgb_u32(0x9F5F80));
+    draw.background().color(rgb_u32(0xFFF5EB));
     // draw.background().color(BLACK);
     // draw.background().color(WHITE);
 
@@ -65,21 +66,21 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let noise = nannou::noise::Perlin::new().set_seed(model.seed as u32);
     let gradient: Gradient<LinSrgb<f32>> = Gradient::new(model.colors.clone());
 
-    let line_count = 10000;
-    let min_vertices_per_line = 10;
-    let max_vertices_per_line = 50;
-    let step_size = 5.0;
+    let line_count = 550;
+    let min_vertices_per_line = 50;
+    let max_vertices_per_line = 100;
+    let step_size = 2.0;
 
     let lines = (0..line_count).map(|_| {
         let mut point = pt2(
-            rng.gen_range(w.left() - 300.0..w.right() + 300.0),
-            rng.gen_range(w.bottom() - 300.0..w.top() + 300.0),
+            rng.gen_range(w.left() + 150.0..w.right() - 300.0),
+            rng.gen_range(w.bottom() + 250.0..w.top() - 250.0),
         );
         let mut line: Vec<Vec2> = vec![point];
 
         for _ in 0..(rng.gen_range(min_vertices_per_line..max_vertices_per_line)) {
-            let scaled_x = point[0] * 0.0001;
-            let scaled_y = point[1] * 0.0001;
+            let scaled_x = point[0] * 0.0002;
+            let scaled_y = point[1] * 0.0002;
             let noise_value = noise.get([scaled_x as f64, scaled_y as f64]);
 
             let angle = map_range(noise_value, 0.0, 1.0, 0.0, PI * 2.0 as f32);
@@ -98,7 +99,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .join_round()
             .weight(1.0)
             .points_colored(line.iter().enumerate().map(|(i, &point)| {
-                let color = gradient.get(map_range(i, 0, line.len() - 1, 1.0, 0.0));
+                let color = gradient.get(map_range(point.x, 0.0, w.right() - 250.0, 0.0, 1.0));
                 (point, color)
             }));
     }
