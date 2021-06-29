@@ -37,21 +37,14 @@ fn model(app: &App) -> Model {
         lin_srgb(0x7f as f32, 0x00 as f32, 0x00 as f32),
     ]
     .iter()
-    .map(|c| {
-        (
-            c.red / 255 as f32,
-            c.green / 255 as f32,
-            c.blue / 255 as f32,
-        )
-            .into()
-    })
+    .map(|c| (c.red / 255_f32, c.green / 255_f32, c.blue / 255_f32).into())
     .collect();
 
-    // Model { seed: 1, colors }
-    Model {
-        seed: thread_rng().gen_range(10..1000),
-        colors,
-    }
+    Model { seed: 1, colors }
+    // Model {
+    //     seed: thread_rng().gen_range(10..1000),
+    //     colors,
+    // }
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
