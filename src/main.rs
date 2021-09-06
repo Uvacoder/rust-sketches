@@ -16,7 +16,6 @@ fn main() {
 
 fn model(app: &App) -> Model {
     app.set_loop_mode(LoopMode::loop_once());
-
     let _window = app
         .new_window()
         // .size(1024, 768)
@@ -48,6 +47,10 @@ fn model(app: &App) -> Model {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
+    if app.elapsed_frames() > 1 {
+        app.quit();
+    }
+
     let draw = app.draw();
     let w = app.window_rect();
 
@@ -91,7 +94,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.polyline()
             .join_round()
             .weight(1.0)
-            .points_colored(line.iter().enumerate().map(|(i, &point)| {
+            .points_colored(line.iter().enumerate().map(|(_i, &point)| {
                 let color = gradient.get(map_range(point.x, 0.0, w.right() - 250.0, 0.0, 1.0));
                 (point, color)
             }));
@@ -106,9 +109,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
 fn captured_frame_path(app: &App, frame: &Frame) -> std::path::PathBuf {
     app.project_path()
         .expect("failed to locate `project_path`")
-        .join(app.exe_name().unwrap())
+        .join("sketches")
         .join(format!("{:03}", frame.nth()))
-        .with_extension("png")
+        .with_extension("jpg")
 }
 
 fn key_pressed(app: &App, _model: &mut Model, key: Key) {
