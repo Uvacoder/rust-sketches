@@ -4,6 +4,7 @@ use nannou::noise::Seedable;
 use nannou::prelude::*;
 use nannou::rand::rngs::StdRng;
 use nannou::rand::{thread_rng, Rng, SeedableRng};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 struct Model {
     seed: u64,
@@ -106,11 +107,16 @@ fn view(app: &App, model: &Model, frame: Frame) {
     app.main_window().capture_frame(file_path);
 }
 
-fn captured_frame_path(app: &App, frame: &Frame) -> std::path::PathBuf {
+fn captured_frame_path(app: &App, _frame: &Frame) -> std::path::PathBuf {
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+
     app.project_path()
         .expect("failed to locate `project_path`")
         .join("sketches")
-        .join(format!("{:03}", frame.nth()))
+        .join(format!("sea-ways-{}", since_the_epoch.as_secs()))
         .with_extension("jpg")
 }
 
