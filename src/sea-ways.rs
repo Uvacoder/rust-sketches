@@ -47,6 +47,8 @@ fn model(app: &App) -> Model {
     // }
 }
 
+const NOISE_SCALE: f32 = 0.005;
+
 fn view(app: &App, model: &Model, frame: Frame) {
     if app.elapsed_frames() > 1 {
         app.quit();
@@ -60,7 +62,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // draw.background().color(WHITE);
 
     let mut rng = StdRng::seed_from_u64(model.seed);
-    let noise = nannou::noise::Perlin::new().set_seed(model.seed as u32);
+    let noise = nannou::noise::OpenSimplex::new().set_seed(model.seed as u32);
     let gradient: Gradient<LinSrgb<f32>> = Gradient::new(model.colors.clone());
 
     let line_count = 550;
@@ -70,17 +72,17 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let lines = (0..line_count).map(|_| {
         let mut point = pt2(
-            rng.gen_range(w.left() + 150.0..w.right() - 300.0),
+            rng.gen_range(w.left() + 300.0..w.right() - 300.0),
             rng.gen_range(w.bottom() + 250.0..w.top() - 250.0),
         );
         let mut line: Vec<Vec2> = vec![point];
 
         for _ in 0..(rng.gen_range(min_vertices_per_line..max_vertices_per_line)) {
-            let scaled_x = point[0] * 0.0002;
-            let scaled_y = point[1] * 0.0002;
+            let scaled_x = point[0] * NOISE_SCALE;
+            let scaled_y = point[1] * NOISE_SCALE;
             let noise_value = noise.get([scaled_x as f64, scaled_y as f64]);
 
-            let angle = map_range(noise_value, 0.0, 1.0, 0.0, PI * 2.0 as f32);
+            let angle = map_range(noise_value, -1.0, 1.0, 0.0, TAU as f32);
 
             point = pt2(
                 point[0] + step_size * angle.cos(),
@@ -96,7 +98,19 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .join_round()
             .weight(1.0)
             .points_colored(line.iter().enumerate().map(|(_i, &point)| {
-                let color = gradient.get(map_range(point.x, 0.0, w.right() - 250.0, 0.0, 1.0));
+                // let color = gradient.get(map_range(point.x, 0.0, w.right() - 250.0, 0.0, 1.0));
+
+                let scaled_x = point.x * NOISE_SCALE;
+                let scaled_y = point.y * NOISE_SCALE;
+                let noise_value_0 = noise.get([scaled_x as f64, scaled_y as f64, 0.0]);
+                let noise_value_1 = noise.get([scaled_x as f64, scaled_y as f64, 1.0]);
+                let gradient_value = map_range(noise_value_1, -1.0, 1.0, 0.0, 1.0);
+                println!(
+                    "nv0 {} | nv1 {} | gv {}",
+                    noise_value_0, noise_value_1, gradient_value
+                );
+                let color = gradient.get(gradient_value);
+
                 (point, color)
             }));
     }

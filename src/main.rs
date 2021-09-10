@@ -1,26 +1,40 @@
-use nannou::color::{rgb_u32, Gradient};
-use nannou::noise::NoiseFn;
 use nannou::noise::Seedable;
+use nannou::noise::{NoiseFn, OpenSimplex};
 use nannou::prelude::*;
-use nannou::rand::rngs::StdRng;
-use nannou::rand::{thread_rng, Rng, SeedableRng};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 struct Model {
+    things: Vec<Thing>,
     seed: u64,
     colors: Vec<LinSrgb<f32>>,
+    noise: OpenSimplex,
+}
+
+struct Thing {
+    positions: Vec<Vec2>,
+}
+
+impl Thing {
+    pub fn new(p: Vec2) -> Self {
+        let mut positions = Vec::new();
+        positions.push(p);
+        Thing { positions }
+    }
 }
 
 fn main() {
-    nannou::app(model).run();
+    nannou::app(model).update(update).run();
 }
 
+const N_THINGS: usize = 2000;
+const SCREEN_WIDTH: f32 = 1024.0;
+const SCREEN_HEIGHT: f32 = 1024.0;
+
 fn model(app: &App) -> Model {
-    app.set_loop_mode(LoopMode::loop_once());
+    // app.set_loop_mode(LoopMode::loop_once());
     let _window = app
         .new_window()
-        // .size(1024, 768)
-        .size(1024, 768)
+        .size(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -40,7 +54,24 @@ fn model(app: &App) -> Model {
     .map(|c| (c.red / 255_f32, c.green / 255_f32, c.blue / 255_f32).into())
     .collect();
 
-    Model { seed: 1, colors }
+    let mut things = Vec::new();
+
+    for i in 0..N_THINGS {
+        let thing = Thing::new(vec2(
+            (random::<f32>() - 0.5) * SCREEN_WIDTH,
+            (random::<f32>() - 0.5) * SCREEN_HEIGHT,
+        ));
+        things.push(thing);
+    }
+
+    let seed = 1;
+    let noise = nannou::noise::OpenSimplex::new().set_seed(seed as u32);
+    Model {
+        things,
+        seed,
+        colors,
+        noise,
+    }
     // Model {
     //     seed: thread_rng().gen_range(10..1000),
     //     colors,
@@ -49,76 +80,56 @@ fn model(app: &App) -> Model {
 
 const NOISE_SCALE: f32 = 0.005;
 
-fn view(app: &App, model: &Model, frame: Frame) {
-    if app.elapsed_frames() > 1 {
-        app.quit();
-    }
+fn update(app: &App, model: &mut Model, _update: Update) {
+    let time = app.elapsed_frames() as f32 / 120.0;
+    let sn = 0.01 + time.cos() as f64 * 0.005;
+    for thing in model.things.iter_mut() {
+        thing.positions.clear();
+        thing.positions.push(vec2(
+            (random::<f32>() - 0.5) * SCREEN_WIDTH,
+            (random::<f32>() - 0.5) * SCREEN_HEIGHT,
+        ));
 
-    let draw = app.draw();
-    let w = app.window_rect();
-
-    draw.background().color(rgb_u32(0xFFF5EB));
-    // draw.background().color(BLACK);
-    // draw.background().color(WHITE);
-
-    let mut rng = StdRng::seed_from_u64(model.seed);
-    let noise = nannou::noise::OpenSimplex::new().set_seed(model.seed as u32);
-    let gradient: Gradient<LinSrgb<f32>> = Gradient::new(model.colors.clone());
-
-    let line_count = 550;
-    let min_vertices_per_line = 50;
-    let max_vertices_per_line = 100;
-    let step_size = 2.0;
-
-    let lines = (0..line_count).map(|_| {
-        let mut point = pt2(
-            rng.gen_range(w.left() + 300.0..w.right() - 300.0),
-            rng.gen_range(w.bottom() + 250.0..w.top() - 250.0),
-        );
-        let mut line: Vec<Vec2> = vec![point];
-
-        for _ in 0..(rng.gen_range(min_vertices_per_line..max_vertices_per_line)) {
-            let scaled_x = point[0] * NOISE_SCALE;
-            let scaled_y = point[1] * NOISE_SCALE;
-            let noise_value = noise.get([scaled_x as f64, scaled_y as f64]);
-
-            let angle = map_range(noise_value, -1.0, 1.0, 0.0, TAU as f32);
-
-            point = pt2(
-                point[0] + step_size * angle.cos(),
-                point[1] + step_size * angle.sin(),
-            );
-            line.push(point);
-        }
-        line
-    });
-
-    for line in lines {
-        draw.polyline()
-            .join_round()
-            .weight(1.0)
-            .points_colored(line.iter().enumerate().map(|(_i, &point)| {
-                // let color = gradient.get(map_range(point.x, 0.0, w.right() - 250.0, 0.0, 1.0));
-
-                let scaled_x = point.x * NOISE_SCALE;
-                let scaled_y = point.y * NOISE_SCALE;
-                let noise_value_0 = noise.get([scaled_x as f64, scaled_y as f64, 0.0]);
-                let noise_value_1 = noise.get([scaled_x as f64, scaled_y as f64, 1.0]);
-                let gradient_value = map_range(noise_value_1, -1.0, 1.0, 0.0, 1.0);
-                println!(
-                    "nv0 {} | nv1 {} | gv {}",
-                    noise_value_0, noise_value_1, gradient_value
+        for k in 0..10 {
+            let last = thing.positions[0];
+            let new = last
+                + vec2(
+                    model
+                        .noise
+                        .get([sn * last.x as f64, sn * last.y as f64, 0.0])
+                        as f32,
+                    model
+                        .noise
+                        .get([sn * last.x as f64, sn * last.y as f64, 1.0])
+                        as f32,
                 );
-                let color = gradient.get(gradient_value);
+            thing.positions.insert(0, new);
+        }
+    }
+}
 
-                (point, color)
-            }));
+fn view(app: &App, model: &Model, frame: Frame) {
+    let draw = app.draw();
+
+    let time = app.elapsed_frames() as f32 / 60.0;
+
+    if app.elapsed_frames() == 1 {
+        draw.background().color(BLACK);
+    }
+    draw.rect()
+        .w_h(SCREEN_WIDTH, SCREEN_HEIGHT)
+        .color(srgba(0.0, 0.0, 0.0, 0.1));
+
+    for thing in model.things.iter() {
+        draw.polyline()
+            .points(thing.positions.iter().cloned())
+            .color(WHITE);
     }
 
     draw.to_frame(app, &frame).unwrap();
 
-    let file_path = captured_frame_path(app, &frame);
-    app.main_window().capture_frame(file_path);
+    // let file_path = captured_frame_path(app, &frame);
+    // app.main_window().capture_frame(file_path);
 }
 
 fn captured_frame_path(app: &App, _frame: &Frame) -> std::path::PathBuf {
