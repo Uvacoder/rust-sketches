@@ -3,19 +3,15 @@ use nannou::noise::NoiseFn;
 use nannou::noise::Seedable;
 use nannou::prelude::*;
 use nannou::rand::rngs::StdRng;
-use nannou::rand::{thread_rng, Rng, SeedableRng};
+use nannou::rand::{Rng, SeedableRng};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-struct Model {
+pub struct Model {
     seed: u64,
     colors: Vec<LinSrgb<f32>>,
 }
 
-fn main() {
-    nannou::app(model).run();
-}
-
-fn model(app: &App) -> Model {
+pub fn model(app: &App) -> Model {
     app.set_loop_mode(LoopMode::loop_once());
     let _window = app
         .new_window()
@@ -49,7 +45,7 @@ fn model(app: &App) -> Model {
 
 const NOISE_SCALE: f32 = 0.005;
 
-fn view(app: &App, model: &Model, frame: Frame) {
+pub fn view(app: &App, model: &Model, frame: Frame) {
     if app.elapsed_frames() > 1 {
         app.quit();
     }
