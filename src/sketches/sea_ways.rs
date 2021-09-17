@@ -101,10 +101,10 @@ pub fn view(app: &App, model: &Model, frame: Frame) {
                 let noise_value_0 = noise.get([scaled_x as f64, scaled_y as f64, 0.0]);
                 let noise_value_1 = noise.get([scaled_x as f64, scaled_y as f64, 1.0]);
                 let gradient_value = map_range(noise_value_1, -1.0, 1.0, 0.0, 1.0);
-                println!(
-                    "nv0 {} | nv1 {} | gv {}",
-                    noise_value_0, noise_value_1, gradient_value
-                );
+                // println!(
+                //     "nv0 {} | nv1 {} | gv {}",
+                //     noise_value_0, noise_value_1, gradient_value
+                // );
                 let color = gradient.get(gradient_value);
 
                 (point, color)
