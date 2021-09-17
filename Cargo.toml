@@ -8,3 +8,7 @@ edition = "2018"
 
 [dependencies]
 nannou = "0.17"
+rayon = "1.5.1"
+indicatif = "0.16.2"
+structopt = "0.3.23"
+
